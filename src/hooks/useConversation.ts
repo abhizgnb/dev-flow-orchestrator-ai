@@ -50,7 +50,19 @@ export const useConversation = () => {
       return;
     }
 
-    setMessages(data || []);
+    // Type cast the data to match our Message interface
+    const typedMessages: Message[] = (data || []).map(msg => ({
+      id: msg.id,
+      content: msg.content,
+      sender: msg.sender as 'user' | 'agent',
+      agent_name: msg.agent_name || undefined,
+      agent_avatar: msg.agent_avatar || undefined,
+      agent_color: msg.agent_color || undefined,
+      message_type: msg.message_type as 'message' | 'code' | 'review' | 'test' | 'deployment' || 'message',
+      created_at: msg.created_at
+    }));
+
+    setMessages(typedMessages);
   };
 
   const loadWorkflow = async (convId: string) => {
@@ -65,7 +77,17 @@ export const useConversation = () => {
       return;
     }
 
-    setWorkflow(data);
+    if (data) {
+      // Type cast the data to match our AgentWorkflow interface
+      const typedWorkflow: AgentWorkflow = {
+        id: data.id,
+        steps: Array.isArray(data.steps) ? data.steps as WorkflowStep[] : [],
+        current_step: data.current_step || 0,
+        progress: data.progress || 0,
+        status: data.status || 'pending'
+      };
+      setWorkflow(typedWorkflow);
+    }
   };
 
   const sendMessage = async (content: string) => {
@@ -111,8 +133,18 @@ export const useConversation = () => {
           filter: `conversation_id=eq.${conversationId}`
         },
         (payload) => {
-          const newMessage = payload.new as Message;
-          setMessages(prev => [...prev, newMessage]);
+          const newMessage = payload.new;
+          const typedMessage: Message = {
+            id: newMessage.id,
+            content: newMessage.content,
+            sender: newMessage.sender as 'user' | 'agent',
+            agent_name: newMessage.agent_name || undefined,
+            agent_avatar: newMessage.agent_avatar || undefined,
+            agent_color: newMessage.agent_color || undefined,
+            message_type: newMessage.message_type as 'message' | 'code' | 'review' | 'test' | 'deployment' || 'message',
+            created_at: newMessage.created_at
+          };
+          setMessages(prev => [...prev, typedMessage]);
         }
       )
       .subscribe();
@@ -128,8 +160,15 @@ export const useConversation = () => {
           filter: `conversation_id=eq.${conversationId}`
         },
         (payload) => {
-          const updatedWorkflow = payload.new as AgentWorkflow;
-          setWorkflow(updatedWorkflow);
+          const updatedData = payload.new;
+          const typedWorkflow: AgentWorkflow = {
+            id: updatedData.id,
+            steps: Array.isArray(updatedData.steps) ? updatedData.steps as WorkflowStep[] : [],
+            current_step: updatedData.current_step || 0,
+            progress: updatedData.progress || 0,
+            status: updatedData.status || 'pending'
+          };
+          setWorkflow(typedWorkflow);
         }
       )
       .subscribe();
