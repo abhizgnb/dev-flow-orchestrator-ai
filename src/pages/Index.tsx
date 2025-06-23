@@ -7,40 +7,16 @@ import ChatMessage from '@/components/ChatMessage';
 import ChatInput from '@/components/ChatInput';
 import AgentCard from '@/components/AgentCard';
 import AgentWorkflow from '@/components/AgentWorkflow';
-import { agents, getAgentById } from '@/data/agents';
+import AuthForm from '@/components/AuthForm';
+import { agents } from '@/data/agents';
+import { useAuth } from '@/hooks/useAuth';
+import { useConversation } from '@/hooks/useConversation';
 import { toast } from '@/hooks/use-toast';
 
-interface Message {
-  id: string;
-  content: string;
-  sender: 'user' | 'agent';
-  agentName?: string;
-  agentAvatar?: string;
-  agentColor?: string;
-  timestamp: Date;
-  type?: 'message' | 'code' | 'review' | 'test' | 'deployment';
-}
-
 const Index = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      content: '👋 Welcome to the Multi-Agent Development Platform! I\'m Alex, your Prompt Interpreter. Tell me what you want to build, and I\'ll coordinate with my team of expert AI agents to bring your vision to life.\n\nOur team includes:\n• Morgan (Full-Stack Developer)\n• Jordan (Code Reviewer)\n• Riley (QA Engineer)\n• Casey (DevOps Specialist)\n• Sam (Dashboard Creator)\n\nWhat would you like us to build today?',
-      sender: 'agent',
-      agentName: 'Alex the Interpreter',
-      agentAvatar: '🎯',
-      agentColor: 'bg-purple-500',
-      timestamp: new Date(),
-      type: 'message'
-    }
-  ]);
-  
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentWorkflow, setCurrentWorkflow] = useState<any[]>([]);
-  const [workflowProgress, setWorkflowProgress] = useState(0);
-  const [currentStep, setCurrentStep] = useState(0);
+  const { user, loading: authLoading, signOut } = useAuth();
+  const { messages, workflow, isLoading, sendMessage } = useConversation();
   const [activeTab, setActiveTab] = useState('chat');
-  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -52,128 +28,69 @@ const Index = () => {
     scrollToBottom();
   }, [messages]);
 
-  const simulateAgentResponse = async (userMessage: string) => {
-    setIsLoading(true);
-    
-    // Simulate Alex (Prompt Agent) responding first
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const alexResponse: Message = {
-      id: Date.now().toString(),
-      content: `I understand you want to build: "${userMessage}"\n\nLet me break this down and create a clear development plan. I'll coordinate with the team to:\n\n1. Analyze requirements\n2. Design architecture\n3. Generate code\n4. Review for quality\n5. Test thoroughly\n6. Deploy successfully\n\nLet me start the workflow now...`,
-      sender: 'agent',
-      agentName: 'Alex the Interpreter',
-      agentAvatar: '🎯',
-      agentColor: 'bg-purple-500',
-      timestamp: new Date(),
-      type: 'message'
-    };
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent" />
+      </div>
+    );
+  }
 
-    setMessages(prev => [...prev, alexResponse]);
-
-    // Create workflow steps
-    const workflowSteps = [
-      {
-        id: '1',
-        agentName: 'Alex',
-        title: 'Requirements Analysis',
-        status: 'in-progress' as const,
-        description: 'Analyzing and refining requirements',
-        estimatedTime: '2 min'
-      },
-      {
-        id: '2',
-        agentName: 'Morgan',
-        title: 'Code Generation',
-        status: 'pending' as const,
-        description: 'Writing clean, scalable code',
-        estimatedTime: '5 min'
-      },
-      {
-        id: '3',
-        agentName: 'Jordan',
-        title: 'Code Review',
-        status: 'pending' as const,
-        description: 'Reviewing for quality and security',
-        estimatedTime: '3 min'
-      },
-      {
-        id: '4',
-        agentName: 'Riley',
-        title: 'Quality Assurance',
-        status: 'pending' as const,
-        description: 'Running comprehensive tests',
-        estimatedTime: '4 min'
-      },
-      {
-        id: '5',
-        agentName: 'Casey',
-        title: 'Deployment',
-        status: 'pending' as const,
-        description: 'Deploying to production',
-        estimatedTime: '2 min'
-      }
-    ];
-
-    setCurrentWorkflow(workflowSteps);
-    setActiveTab('workflow');
-
-    // Simulate Morgan (Coder) responding
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const morganResponse: Message = {
-      id: (Date.now() + 1).toString(),
-      content: `// Generated React Component\nimport React, { useState } from 'react';\nimport { Button } from '@/components/ui/button';\n\nconst MyApp = () => {\n  const [count, setCount] = useState(0);\n  \n  return (\n    <div className="p-6">\n      <h1>Your App</h1>\n      <p>Count: {count}</p>\n      <Button onClick={() => setCount(count + 1)}>\n        Increment\n      </Button>\n    </div>\n  );\n};\n\nexport default MyApp;`,
-      sender: 'agent',
-      agentName: 'Morgan the Builder',
-      agentAvatar: '💻',
-      agentColor: 'bg-green-500',
-      timestamp: new Date(),
-      type: 'code'
-    };
-
-    setMessages(prev => [...prev, morganResponse]);
-
-    // Update workflow progress
-    setCurrentStep(1);
-    setWorkflowProgress(40);
-    
-    // Update agent statuses
-    const updatedAgents = [...agents];
-    updatedAgents[0].status = 'completed'; // Alex
-    updatedAgents[1].status = 'working'; // Morgan
-
-    toast({
-      title: "Development in Progress",
-      description: "Morgan has generated the initial code. Jordan will review it next.",
-    });
-
-    setIsLoading(false);
-  };
+  if (!user) {
+    return <AuthForm />;
+  }
 
   const handleSendMessage = async (content: string) => {
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content,
-      sender: 'user',
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    await simulateAgentResponse(content);
+    await sendMessage(content);
+    if (workflow && workflow.steps.length > 0) {
+      setActiveTab('workflow');
+    }
   };
+
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast({
+        title: "Error signing out",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Convert messages to display format
+  const displayMessages = messages.map(msg => ({
+    id: msg.id,
+    content: msg.content,
+    sender: msg.sender as 'user' | 'agent',
+    agentName: msg.agent_name,
+    agentAvatar: msg.agent_avatar,
+    agentColor: msg.agent_color,
+    timestamp: new Date(msg.created_at),
+    type: msg.message_type as 'message' | 'code' | 'review' | 'test' | 'deployment'
+  }));
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto p-4">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            🤖 Multi-Agent Development Platform
-          </h1>
-          <p className="text-gray-600">
-            AI agents working together to build your software from idea to deployment
-          </p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              🤖 Multi-Agent Development Platform
+            </h1>
+            <p className="text-gray-600">
+              AI agents working together to build your software from idea to deployment
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">
+              Welcome, {user.email}
+            </span>
+            <Button variant="outline" onClick={handleSignOut}>
+              Sign Out
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -197,7 +114,13 @@ const Index = () => {
                       className="flex-1 overflow-y-auto pr-4 mb-4"
                       style={{ maxHeight: '450px' }}
                     >
-                      {messages.map((message) => (
+                      {displayMessages.length === 0 && (
+                        <div className="text-center text-gray-500 mt-8">
+                          <h3 className="text-lg font-semibold mb-2">Welcome to your AI Development Team!</h3>
+                          <p>Start by describing what you want to build, and our AI agents will work together to make it happen.</p>
+                        </div>
+                      )}
+                      {displayMessages.map((message) => (
                         <ChatMessage key={message.id} message={message} />
                       ))}
                       <div ref={messagesEndRef} />
@@ -213,28 +136,20 @@ const Index = () => {
 
               <TabsContent value="workflow" className="mt-4">
                 <div className="space-y-4">
-                  {currentWorkflow.length > 0 && (
+                  {workflow && workflow.steps.length > 0 ? (
                     <AgentWorkflow 
-                      steps={currentWorkflow}
-                      currentStep={currentStep}
-                      progress={workflowProgress}
+                      steps={workflow.steps}
+                      currentStep={workflow.current_step}
+                      progress={workflow.progress}
                     />
+                  ) : (
+                    <Card className="p-6">
+                      <div className="text-center text-gray-500">
+                        <h3 className="text-lg font-semibold mb-2">No Active Workflow</h3>
+                        <p>Start a conversation in the chat to see the development workflow in action!</p>
+                      </div>
+                    </Card>
                   )}
-                  <Card className="p-6">
-                    <div className="text-center text-gray-500">
-                      {currentWorkflow.length === 0 ? (
-                        <>
-                          <h3 className="text-lg font-semibold mb-2">No Active Workflow</h3>
-                          <p>Start a conversation in the chat to see the development workflow in action!</p>
-                        </>
-                      ) : (
-                        <>
-                          <h3 className="text-lg font-semibold mb-2">Development In Progress</h3>
-                          <p>Our AI agents are working hard to build your project!</p>
-                        </>
-                      )}
-                    </div>
-                  </Card>
                 </div>
               </TabsContent>
 
@@ -248,7 +163,7 @@ const Index = () => {
             </Tabs>
           </div>
 
-          {/* Sidebar - Agent Status */}
+          {/* Sidebar - Quick Start */}
           <div className="lg:col-span-1">
             <Card>
               <CardHeader>
@@ -282,16 +197,12 @@ const Index = () => {
                   <h4 className="font-semibold text-sm mb-2">🎯 Current Status</h4>
                   <div className="text-sm space-y-1">
                     <div className="flex justify-between">
-                      <span>Active Agents:</span>
-                      <span className="font-mono">
-                        {agents.filter(a => a.status === 'working').length}/6
-                      </span>
+                      <span>Messages:</span>
+                      <span className="font-mono">{displayMessages.length}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Completed Tasks:</span>
-                      <span className="font-mono">
-                        {agents.filter(a => a.status === 'completed').length}
-                      </span>
+                      <span>Workflow Progress:</span>
+                      <span className="font-mono">{workflow?.progress || 0}%</span>
                     </div>
                   </div>
                 </div>

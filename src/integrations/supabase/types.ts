@@ -9,7 +9,115 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      agent_workflows: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          current_step: number | null
+          id: string
+          progress: number | null
+          status: string | null
+          steps: Json
+          updated_at: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          current_step?: number | null
+          id?: string
+          progress?: number | null
+          status?: string | null
+          steps?: Json
+          updated_at?: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          current_step?: number | null
+          id?: string
+          progress?: number | null
+          status?: string | null
+          steps?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_workflows_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          agent_avatar: string | null
+          agent_color: string | null
+          agent_name: string | null
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          message_type: string | null
+          sender: string
+        }
+        Insert: {
+          agent_avatar?: string | null
+          agent_color?: string | null
+          agent_name?: string | null
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          message_type?: string | null
+          sender: string
+        }
+        Update: {
+          agent_avatar?: string | null
+          agent_color?: string | null
+          agent_name?: string | null
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          message_type?: string | null
+          sender?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
